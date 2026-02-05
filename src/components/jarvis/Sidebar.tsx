@@ -1,4 +1,5 @@
- import { motion } from "framer-motion";
+import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
  import { 
    MessageSquare, 
    BookOpen, 
@@ -30,6 +31,15 @@
  ];
  
  export function Sidebar({ currentView, onViewChange, isOpen, onToggle }: SidebarProps) {
+  const [isDesktop, setIsDesktop] = useState(false);
+  
+  useEffect(() => {
+    const checkDesktop = () => setIsDesktop(window.innerWidth >= 768);
+    checkDesktop();
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
+  }, []);
+
    return (
      <>
        {/* Mobile Toggle */}
@@ -56,9 +66,9 @@
        {/* Sidebar */}
        <motion.aside
          initial={false}
-         animate={{ x: isOpen ? 0 : "-100%" }}
+        animate={{ x: isDesktop ? 0 : (isOpen ? 0 : "-100%") }}
          className={cn(
-           "fixed left-0 top-0 h-full w-64 z-50 md:relative md:translate-x-0",
+          "fixed left-0 top-0 h-full w-64 z-50 md:relative",
            "bg-sidebar border-r border-sidebar-border",
            "flex flex-col"
          )}
