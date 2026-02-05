@@ -75,7 +75,25 @@
  const loadFromStorage = <T>(key: string, defaultValue: T): T => {
    try {
      const stored = localStorage.getItem(key);
-     if (stored) return JSON.parse(stored);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Convert date strings back to Date objects for messages
+      if (key === STORAGE_KEYS.MESSAGES && Array.isArray(parsed)) {
+        return parsed.map((msg: Message) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        })) as T;
+      }
+      // Convert date strings for todos
+      if (key === STORAGE_KEYS.TODOS && Array.isArray(parsed)) {
+        return parsed.map((todo: Todo) => ({
+          ...todo,
+          createdAt: new Date(todo.createdAt),
+          deadline: todo.deadline ? new Date(todo.deadline) : undefined,
+        })) as T;
+      }
+      return parsed;
+    }
    } catch (e) {
      console.error("Error loading from storage:", e);
    }
