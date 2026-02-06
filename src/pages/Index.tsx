@@ -7,11 +7,14 @@ import { StudyAssistant } from "@/components/jarvis/StudyAssistant";
 import { TodoList } from "@/components/jarvis/TodoList";
 import { ResumeBuilder } from "@/components/jarvis/ResumeBuilder";
 import { ProjectIdeas } from "@/components/jarvis/ProjectIdeas";
+import { ExamMode } from "@/components/jarvis/ExamMode";
 import { useJarvis } from "@/hooks/useJarvis";
+import { toast } from "sonner";
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<View>("chat");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showExamMode, setShowExamMode] = useState(false);
 
   const {
     jarvisState,
@@ -27,14 +30,33 @@ const Index = () => {
     handleToggleTodo,
     handleDeleteTodo,
     handleSelectTopic,
-    handleStartExam,
     handleUpdateResume,
     handleGenerateResumeContent,
     handleGenerateIdeas,
     setIsListening,
   } = useJarvis();
 
+  const handleStartExam = () => {
+    setShowExamMode(true);
+  };
+
+  const handleExamComplete = (score: number, total: number) => {
+    const percentage = Math.round((score / total) * 100);
+    toast.success(`Exam completed! Score: ${score}/${total} (${percentage}%)`);
+  };
+
   const renderView = () => {
+    // Show exam mode overlay
+    if (showExamMode && currentView === "study") {
+      return (
+        <ExamMode
+          topics={topics}
+          onClose={() => setShowExamMode(false)}
+          onComplete={handleExamComplete}
+        />
+      );
+    }
+
     switch (currentView) {
       case "chat":
         return (
