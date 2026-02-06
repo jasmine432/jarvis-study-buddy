@@ -1,46 +1,12 @@
- import { useState, useCallback } from "react";
- import { JarvisState } from "@/components/jarvis/JarvisCore";
- import { Message } from "@/components/jarvis/ChatMessage";
- import { Todo } from "@/components/jarvis/TodoList";
- import { Topic } from "@/components/jarvis/StudyAssistant";
- import { ResumeData } from "@/components/jarvis/ResumeBuilder";
- import { ProjectIdea } from "@/components/jarvis/ProjectIdeas";
- 
- // AI Response placeholder - can be replaced with actual API integration
- const generateAIResponse = async (message: string): Promise<string> => {
-   // Simulate AI thinking delay
-   await new Promise((resolve) => setTimeout(resolve, 1500));
- 
-   const lowerMessage = message.toLowerCase();
- 
-   // Check for greeting
-   if (lowerMessage.includes("hello jarvis") || lowerMessage.includes("hi jarvis")) {
-     return "Hello! I'm Jarvis, your personal AI assistant. I can help you with studying, managing tasks, building your resume, or generating project ideas. What would you like to work on today?";
-   }
- 
-   // Check for task-related commands
-   if (lowerMessage.includes("add task") || lowerMessage.includes("add todo")) {
-     return "I can help you add a task. Please tell me what task you'd like to add, and I'll create it for you. You can also use the Tasks panel on the left to manage your to-do list directly.";
-   }
- 
-   // Check for study-related commands
-   if (lowerMessage.includes("study") || lowerMessage.includes("learn") || lowerMessage.includes("explain")) {
-     return "I'd be happy to help you study! You can use the Study panel to select a topic, or ask me to explain any concept. What subject would you like to focus on - Mathematics, Physics, or Computer Science?";
-   }
- 
-   // Check for resume-related commands
-   if (lowerMessage.includes("resume") || lowerMessage.includes("cv")) {
-     return "I can help you build your resume! Head to the Resume panel to fill in your details, and I can generate professional summaries and descriptions for you. What aspect of your resume would you like to work on?";
-   }
- 
-   // Check for project-related commands
-   if (lowerMessage.includes("project") || lowerMessage.includes("idea")) {
-     return "Looking for project ideas? I can suggest projects based on your skill level and interests. Check out the Projects panel and click 'Generate Ideas' for AI-powered suggestions with starter code!";
-   }
- 
-   // Default response
-   return "I understand you're asking about \"" + message.slice(0, 50) + (message.length > 50 ? "..." : "") + "\". This is a placeholder response - in the future, I'll be connected to an AI API to provide intelligent answers. For now, you can explore my features: Study Assistant, Task Manager, Resume Builder, and Project Ideas!";
- };
+import { useState, useCallback, useRef } from "react";
+import { JarvisState } from "@/components/jarvis/JarvisCore";
+import { Message } from "@/components/jarvis/ChatMessage";
+import { Todo } from "@/components/jarvis/TodoList";
+import { Topic } from "@/components/jarvis/StudyAssistant";
+import { ResumeData } from "@/components/jarvis/ResumeBuilder";
+import { ProjectIdea } from "@/components/jarvis/ProjectIdeas";
+import { streamChat } from "@/lib/ai";
+import { toast } from "sonner";
  
  // Text-to-speech function
  const speak = (text: string): Promise<void> => {
@@ -204,53 +170,96 @@
    );
    const [isGeneratingIdeas, setIsGeneratingIdeas] = useState(false);
  
-   // Handle sending a message
-   const handleSendMessage = useCallback(async (text: string) => {
-     // Add user message
-     const userMessage: Message = {
-       id: Date.now().toString(),
-       role: "user",
-       content: text,
-       timestamp: new Date(),
-     };
- 
-     setMessages((prev) => {
-       const updated = [...prev, userMessage];
-       saveToStorage(STORAGE_KEYS.MESSAGES, updated);
-       return updated;
-     });
- 
-     // Update state to thinking
-     setJarvisState("thinking");
-     setIsListening(false);
- 
-     try {
-       // Get AI response
-       const response = await generateAIResponse(text);
- 
-       // Add assistant message
-       const assistantMessage: Message = {
-         id: (Date.now() + 1).toString(),
-         role: "assistant",
-         content: response,
-         timestamp: new Date(),
-       };
- 
-       setMessages((prev) => {
-         const updated = [...prev, assistantMessage];
-         saveToStorage(STORAGE_KEYS.MESSAGES, updated);
-         return updated;
-       });
- 
-       // Speak the response
-       setJarvisState("speaking");
-       await speak(response);
-     } catch (error) {
-       console.error("Error processing message:", error);
-     } finally {
-       setJarvisState("idle");
-     }
-   }, []);
+  // Ref to track current assistant message for streaming
+  const assistantMessageRef = useRef<string>("");
+
+  // Handle sending a message
+  const handleSendMessage = useCallback(async (text: string) => {
+    // Add user message
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: text,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => {
+      const updated = [...prev, userMessage];
+      saveToStorage(STORAGE_KEYS.MESSAGES, updated);
+      return updated;
+    });
+
+    // Update state to thinking
+    setJarvisState("thinking");
+    setIsListening(false);
+
+    // Reset the assistant message accumulator
+    assistantMessageRef.current = "";
+    const assistantMessageId = (Date.now() + 1).toString();
+
+    // Build message history for context (last 10 messages)
+    const messageHistory = messages.slice(-10).map((msg) => ({
+      role: msg.role as "user" | "assistant",
+      content: msg.content,
+    }));
+    messageHistory.push({ role: "user", content: text });
+
+    try {
+      await streamChat({
+        messages: messageHistory,
+        onDelta: (chunk) => {
+          assistantMessageRef.current += chunk;
+          
+          setMessages((prev) => {
+            const lastMsg = prev[prev.length - 1];
+            
+            // If last message is already the assistant streaming message, update it
+            if (lastMsg?.id === assistantMessageId && lastMsg?.role === "assistant") {
+              return prev.map((m) =>
+                m.id === assistantMessageId
+                  ? { ...m, content: assistantMessageRef.current }
+                  : m
+              );
+            }
+            
+            // First chunk: create the assistant message
+            return [
+              ...prev,
+              {
+                id: assistantMessageId,
+                role: "assistant" as const,
+                content: assistantMessageRef.current,
+                timestamp: new Date(),
+              },
+            ];
+          });
+        },
+        onDone: () => {
+          // Save final messages to storage
+          setMessages((prev) => {
+            saveToStorage(STORAGE_KEYS.MESSAGES, prev);
+            return prev;
+          });
+          
+          // Speak the response (optional - only first 500 chars to keep it short)
+          const responseToSpeak = assistantMessageRef.current.slice(0, 500);
+          setJarvisState("speaking");
+          speak(responseToSpeak).finally(() => {
+            setJarvisState("idle");
+          });
+        },
+        onError: (error) => {
+          console.error("AI Error:", error);
+          toast.error(error.message || "Failed to get AI response");
+          setJarvisState("idle");
+        },
+      });
+    } catch (error) {
+      console.error("Error processing message:", error);
+      toast.error("Failed to connect to AI");
+      setJarvisState("idle");
+    }
+  }, [messages]);
  
    // Todo handlers
    const handleAddTodo = useCallback((text: string, priority: "low" | "medium" | "high" = "medium") => {
