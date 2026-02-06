@@ -312,9 +312,6 @@ import { toast } from "sonner";
      handleSendMessage(`I want to study ${topic.name}`);
    }, [handleSendMessage]);
  
-   const handleStartExam = useCallback(() => {
-     handleSendMessage("Start an exam to test my knowledge on the topics I've been studying");
-   }, [handleSendMessage]);
  
    // Resume handlers
    const handleUpdateResume = useCallback((data: ResumeData) => {
@@ -406,8 +403,7 @@ import { toast } from "sonner";
      handleAddTodo,
      handleToggleTodo,
      handleDeleteTodo,
-     handleSelectTopic,
-     handleStartExam,
+    handleSelectTopic,
      handleUpdateResume,
      handleGenerateResumeContent,
      handleGenerateIdeas,
