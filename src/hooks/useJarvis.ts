@@ -323,59 +323,68 @@ import { toast } from "sonner";
      handleSendMessage(`Generate content for my resume ${section} section`);
    }, [handleSendMessage]);
  
-   // Project ideas handlers
-   const handleGenerateIdeas = useCallback(async () => {
-     setIsGeneratingIdeas(true);
-     
-     // Simulate generating new ideas
-     await new Promise((resolve) => setTimeout(resolve, 2000));
-     
-     const newIdea: ProjectIdea = {
-       id: Date.now().toString(),
-       title: "AI Chat Application",
-       description: "Build a real-time chat application with AI-powered responses using WebSockets and a language model API.",
-       difficulty: "advanced",
-       tags: ["React", "WebSocket", "AI", "Node.js"],
-       codeSnippet: `import { useState, useEffect } from 'react';
- 
- function ChatApp() {
-   const [messages, setMessages] = useState([]);
-   const [input, setInput] = useState('');
- 
-   const sendMessage = async () => {
-     // Add your message
-     setMessages([...messages, { role: 'user', content: input }]);
-     
-     // Get AI response (placeholder)
-     const response = await fetch('/api/chat', {
-       method: 'POST',
-       body: JSON.stringify({ message: input })
-     });
-     
-     const data = await response.json();
-     setMessages(prev => [...prev, { role: 'ai', content: data.reply }]);
-   };
- 
-   return (
-     <div className="chat-container">
-       {messages.map((msg, i) => (
-         <div key={i} className={msg.role}>{msg.content}</div>
-       ))}
-       <input value={input} onChange={e => setInput(e.target.value)} />
-       <button onClick={sendMessage}>Send</button>
-     </div>
-   );
- }`,
-     };
- 
-     setProjectIdeas((prev) => {
-       const updated = [newIdea, ...prev];
-       saveToStorage(STORAGE_KEYS.PROJECTS, updated);
-       return updated;
-     });
- 
-     setIsGeneratingIdeas(false);
-   }, []);
+  // Project ideas handlers
+  const handleGenerateIdeas = useCallback(async (
+    skills: string[],
+    difficulty: "beginner" | "intermediate" | "advanced"
+  ) => {
+    if (skills.length === 0) {
+      toast.error("Please select at least one skill");
+      return;
+    }
+
+    setIsGeneratingIdeas(true);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-project-ideas`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            skills,
+            difficulty,
+            count: 3,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        if (response.status === 429) {
+          toast.error("Rate limit exceeded. Please try again in a moment.");
+          return;
+        }
+        if (response.status === 402) {
+          toast.error("AI credits depleted. Please add funds to continue.");
+          return;
+        }
+        throw new Error(error.error || "Failed to generate ideas");
+      }
+
+      const data = await response.json();
+
+      if (!data.ideas || data.ideas.length === 0) {
+        throw new Error("No ideas received");
+      }
+
+      setProjectIdeas((prev) => {
+        const updated = [...data.ideas, ...prev];
+        saveToStorage(STORAGE_KEYS.PROJECTS, updated);
+        return updated;
+      });
+
+      toast.success(`Generated ${data.ideas.length} new project ideas!`);
+    } catch (error) {
+      console.error("Error generating project ideas:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to generate ideas");
+    } finally {
+      setIsGeneratingIdeas(false);
+    }
+  }, []);
  
    // Update listening state
    const handleSetIsListening = useCallback((listening: boolean) => {

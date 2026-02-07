@@ -121,7 +121,7 @@ const Index = () => {
         return (
           <ProjectIdeas
             ideas={projectIdeas}
-            onGenerateIdeas={handleGenerateIdeas}
+            onGenerateIdeas={(skills, difficulty) => handleGenerateIdeas(skills, difficulty)}
             isGenerating={isGeneratingIdeas}
           />
         );
