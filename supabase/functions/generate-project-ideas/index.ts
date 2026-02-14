@@ -33,7 +33,9 @@ For each project idea, provide:
 1. A catchy, descriptive title
 2. A detailed description (2-3 sentences) explaining what the project does and what the user will learn
 3. Relevant technology tags
-4. A starter code snippet that gives users a head start (15-30 lines of actual functional code)
+4. A suggested file/folder structure as an array of path strings (folders end with /, files don't)
+5. A starter code snippet that gives users a head start (15-30 lines of actual functional code)
+6. The filename the starter code belongs to
 
 Difficulty levels:
 - beginner: Simple projects focusing on fundamentals, fewer technologies, straightforward logic
@@ -47,7 +49,9 @@ Always respond with valid JSON matching this exact structure:
       "title": "Project Title",
       "description": "Detailed description of the project...",
       "tags": ["Tag1", "Tag2", "Tag3"],
-      "codeSnippet": "// Starter code here..."
+      "fileStructure": ["src/", "src/index.ts", "src/utils/", "package.json", "README.md"],
+      "codeSnippet": "// Starter code here...",
+      "codeFile": "src/index.ts"
     }
   ]
 }`;
@@ -61,6 +65,8 @@ Make sure each project:
 2. Is realistic and achievable for the ${difficulty} level
 3. Has practical real-world applications
 4. Includes a working starter code snippet in the most relevant language/framework
+5. Has a detailed file/folder structure showing all key files (8-15 paths for beginner, 15-25 for intermediate, 20-35 for advanced)
+6. Specifies which file the starter code belongs to
 
 Return ONLY valid JSON with the ideas array.`;
 
@@ -127,7 +133,9 @@ Return ONLY valid JSON with the ideas array.`;
       description: idea.description || "No description provided",
       difficulty: difficulty,
       tags: Array.isArray(idea.tags) ? idea.tags : [],
+      fileStructure: Array.isArray(idea.fileStructure) ? idea.fileStructure : [],
       codeSnippet: idea.codeSnippet || idea.code_snippet || null,
+      codeFile: idea.codeFile || idea.code_file || null,
     }));
 
     console.log("Generated ideas:", formattedIdeas.length);

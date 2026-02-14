@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lightbulb, Code, ChevronDown, ChevronUp, Copy, Check, Sparkles, X } from "lucide-react";
+import { Lightbulb, Code, ChevronDown, ChevronUp, Copy, Check, Sparkles, X, FolderTree, FileText, Folder } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,9 @@ export interface ProjectIdea {
   description: string;
   difficulty: "beginner" | "intermediate" | "advanced";
   tags: string[];
+  fileStructure?: string[];
   codeSnippet?: string;
+  codeFile?: string;
 }
 
 interface ProjectIdeasProps {
@@ -185,12 +187,52 @@ export function ProjectIdeas({ ideas, onGenerateIdeas, isGenerating }: ProjectId
                         {idea.description}
                       </p>
 
+                      {/* File Structure */}
+                      {idea.fileStructure && idea.fileStructure.length > 0 && (
+                        <div>
+                          <span className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
+                            <FolderTree className="w-3 h-3" />
+                            File Structure
+                          </span>
+                          <div className="p-3 rounded-lg bg-background/50 border border-border/30 text-xs font-mono space-y-0.5 max-h-48 overflow-y-auto">
+                            {idea.fileStructure.map((path, i) => {
+                              const isDir = path.endsWith("/");
+                              const depth = (path.match(/\//g) || []).length - (isDir ? 1 : 0);
+                              const name = isDir ? path.slice(0, -1).split("/").pop() + "/" : path.split("/").pop();
+                              const isHighlighted = idea.codeFile && path === idea.codeFile;
+                              return (
+                                <div
+                                  key={i}
+                                  className={cn(
+                                    "flex items-center gap-1.5 py-0.5",
+                                    isHighlighted && "text-primary font-medium"
+                                  )}
+                                  style={{ paddingLeft: `${depth * 16}px` }}
+                                >
+                                  {isDir ? (
+                                    <Folder className="w-3 h-3 text-muted-foreground shrink-0" />
+                                  ) : (
+                                    <FileText className="w-3 h-3 text-muted-foreground shrink-0" />
+                                  )}
+                                  <span>{name}</span>
+                                  {isHighlighted && (
+                                    <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4 ml-1">
+                                      starter
+                                    </Badge>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       {idea.codeSnippet && (
                         <div className="relative">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-xs text-muted-foreground flex items-center gap-1">
                               <Code className="w-3 h-3" />
-                              Starter Code
+                              {idea.codeFile ? idea.codeFile : "Starter Code"}
                             </span>
                             <Button
                               variant="ghost"
