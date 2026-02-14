@@ -99,56 +99,71 @@ import { toast } from "sonner";
  };
  
  // Default project ideas
- const defaultProjectIdeas: ProjectIdea[] = [
-   {
-     id: "1",
-     title: "Personal Portfolio Website",
-     description: "Create a responsive portfolio to showcase your projects and skills. Perfect for beginners learning HTML, CSS, and JavaScript.",
-     difficulty: "beginner",
-     tags: ["HTML", "CSS", "JavaScript", "Portfolio"],
-     codeSnippet: `<!DOCTYPE html>
- <html lang="en">
- <head>
-   <meta charset="UTF-8">
-   <title>My Portfolio</title>
- </head>
- <body>
-   <header>
-     <h1>Your Name</h1>
-     <nav>
-       <a href="#projects">Projects</a>
-       <a href="#contact">Contact</a>
-     </nav>
-   </header>
- </body>
- </html>`,
-   },
-   {
-     id: "2",
-     title: "Task Management API",
-     description: "Build a RESTful API for managing tasks with authentication, CRUD operations, and database integration.",
-     difficulty: "intermediate",
-     tags: ["Node.js", "Express", "MongoDB", "REST API"],
-     codeSnippet: `const express = require('express');
- const app = express();
- 
- app.use(express.json());
- 
- let tasks = [];
- 
- app.get('/api/tasks', (req, res) => {
-   res.json(tasks);
- });
- 
- app.post('/api/tasks', (req, res) => {
-   const task = { id: Date.now(), ...req.body };
-   tasks.push(task);
-   res.status(201).json(task);
- });
- 
- app.listen(3000);`,
-   },
- ];
+const defaultProjectIdeas: ProjectIdea[] = [
+  {
+    id: "1",
+    title: "Personal Portfolio Website",
+    description: "Create a responsive portfolio to showcase your projects and skills. Perfect for beginners learning HTML, CSS, and JavaScript.",
+    difficulty: "beginner",
+    tags: ["HTML", "CSS", "JavaScript", "Portfolio"],
+    fileStructure: [
+      "public/", "public/index.html", "public/favicon.ico",
+      "src/", "src/styles/", "src/styles/main.css",
+      "src/scripts/", "src/scripts/app.js",
+      "src/assets/", "src/assets/images/",
+      "README.md", "package.json"
+    ],
+    codeFile: "public/index.html",
+    codeSnippet: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Portfolio</title>
+  <link rel="stylesheet" href="../src/styles/main.css">
+</head>
+<body>
+  <header>
+    <h1>Your Name</h1>
+    <nav>
+      <a href="#projects">Projects</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </header>
+</body>
+</html>`,
+  },
+  {
+    id: "2",
+    title: "Task Management API",
+    description: "Build a RESTful API for managing tasks with authentication, CRUD operations, and database integration.",
+    difficulty: "intermediate",
+    tags: ["Node.js", "Express", "MongoDB", "REST API"],
+    fileStructure: [
+      "src/", "src/index.ts", "src/config/", "src/config/db.ts",
+      "src/routes/", "src/routes/tasks.ts", "src/routes/auth.ts",
+      "src/models/", "src/models/Task.ts", "src/models/User.ts",
+      "src/middleware/", "src/middleware/auth.ts",
+      "src/controllers/", "src/controllers/taskController.ts",
+      "tests/", "tests/tasks.test.ts",
+      "package.json", "tsconfig.json", ".env.example", "README.md"
+    ],
+    codeFile: "src/index.ts",
+    codeSnippet: `import express from 'express';
+import { connectDB } from './config/db';
+import taskRoutes from './routes/tasks';
+
+const app = express();
+app.use(express.json());
+
+connectDB();
+
+app.use('/api/tasks', taskRoutes);
+
+app.listen(3000, () => {
+  console.log('Server running on port 3000');
+});`,
+  },
+];
  
  export function useJarvis() {
    const [jarvisState, setJarvisState] = useState<JarvisState>("idle");
